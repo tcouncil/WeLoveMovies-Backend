@@ -28,7 +28,7 @@ async function update(req, res) {
 
     const data = await service.updateReviewById(knex, reviewId, updatedReview);
     updatedReview.critic = await service.getCriticById(knex, updatedReview.critic_id);
-    console.log(updatedReview)
+
     res.json({ data: updatedReview })
 }
 

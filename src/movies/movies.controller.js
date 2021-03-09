@@ -1,4 +1,5 @@
 const service = require('./movies.service');
+const Treeize = require("treeize");
 
 async function checkMovieId(req, res, next) {
     const knex = req.app.get('db');
@@ -17,24 +18,17 @@ async function checkMovieId(req, res, next) {
 async function list(req, res, next) {
     const knex = req.app.get("db");
     const is_showing = req.query.is_showing;
+    const tree = new Treeize();
 
     if (is_showing === 'true') {
-        res.json({ data: await getShowing(knex) });
+        const movies = await service.listShowing(knex);
+        tree.grow(movies)
+        res.json({ data: tree.getData() });
     } else {
         const movies = await service.list(knex);
-        for (let movie of movies) {
-            movie.reviews = await service.listReviewsById(knex, movie.movie_id);
-        }
-        res.json({ data: movies })
+        tree.grow(movies)
+        res.json({ data: tree.getData() });
     }
-}
-
-async function getShowing(knex) {
-    const movies = await service.listShowing(knex);
-    for (let movie of movies) {
-        movie.reviews = await service.listReviewsById(knex, movie.movie_id);
-    }
-    return movies;
 }
 
 async function read(req, res) {
@@ -50,21 +44,20 @@ async function getTheaters(req, res) {
     res.json({ data: theaters });
 }
 
-async function getReviews(req, res) {
+async function listReviews(req, res) {
     const knex = req.app.get("db");
     const { movieId } = req.params;
-    const reviews = await service.listReviewsById(knex, movieId)
+    const tree = new Treeize();
 
-    for (let review of reviews) {
-        review.critic = await service.getCriticById(knex, review.critic_id)
-    }
+    const reviews = await service.listReviews(knex, movieId)
+    tree.grow(reviews);
 
-    res.json({ data: reviews });
+    res.json({ data: tree.getData() });
 }
 
 module.exports = {
     list,
     read: [checkMovieId, read],
-    getReviews: [checkMovieId, getReviews],
+    getReviews: [checkMovieId, listReviews],
     getTheaters: [checkMovieId, getTheaters]
 };
